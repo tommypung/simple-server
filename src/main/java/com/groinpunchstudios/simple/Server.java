@@ -29,6 +29,15 @@ public class Server extends Thread
 			buff.flip();
 			buff.clear();
 			buff.put("Hej på dig, din fjert".getBytes("UTF-8"));
+			Player player = new Player();
+			player.name = "Tommy".getBytes("UTF-8");
+			player.hp = 100;
+			player.dx = 2000;
+			player.dy = 2330;
+			player.x = 1000;
+			player.y = 1000;
+			player.id = 1;
+			player.serialize(buff);
 			buff.flip();
 			channel.send(buff, addr);
 		} catch (IOException e) {
