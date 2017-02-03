@@ -45,7 +45,7 @@ http://maven.apache.org/maven-v4_0_0.xsd">
 					<archive>
 						<manifest>
 							<addClasspath>true</addClasspath>
-							<mainClass>com.groinpunchstudios.simple.Server</mainClass>
+							<mainClass>com.groinpunchstudios.simple.Main</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

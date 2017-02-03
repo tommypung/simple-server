@@ -16,6 +16,7 @@ public class Server extends Thread
 	private ByteBuffer buff = ByteBuffer.allocate(65507);
 	public Server(int port) throws IOException
 	{
+		LOG.info("Starting SimpleServer on UDP:" + port);
 		channel = DatagramChannel.open();
 		channel.socket().bind(new InetSocketAddress(port));
 	}
@@ -43,14 +44,5 @@ public class Server extends Thread
 		} catch (IOException e) {
 			LOG.log(Level.SEVERE, "Exception trying to receive UDP-package", e);
 		}
-	}
-
-	public static void main(String[] args) throws InterruptedException, IOException
-	{
-		int port = 9999;
-		LOG.info("Starting SimpleServer on UDP:" + port);
-		Server server = new Server(port);
-		server.start();
-		server.join();
 	}
 }
