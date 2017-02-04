@@ -10,9 +10,9 @@ import com.groinpunchstudios.simple.Server;
 public class Client {
 	public static String host;
 	public static int port;
-	public static int secret;
 	private static ByteBuffer readBuff = ByteBuffer.allocate(65507);
 	private static ByteBuffer writeBuff = ByteBuffer.allocate(65507);
+	private static Player player;
 
 	public static void main(String[] args)
 	{
@@ -32,6 +32,25 @@ public class Client {
 			String cmd = s.next();
 			switch(cmd)
 			{
+			case "set_hp":
+				if (player == null) {
+					System.out.println("No player set - call new_player");
+				} else {
+					player.hp = (byte) s.nextShort();
+					updatePlayer();
+				}
+				break;
+			case "move_player":
+				if (player == null) {
+					System.out.println("No player set - call new_player");
+				} else {
+					player.x = s.nextInt();
+					player.y = s.nextInt();
+					player.dx = s.nextShort();
+					player.dy = s.nextShort();
+					updatePlayer();
+				}
+				break;
 			case "new_player":
 				sendNewPlayer(s);
 				break;
@@ -48,6 +67,25 @@ public class Client {
 			}
 		}
 		s.close();
+	}
+
+	private static void updatePlayer()
+	{
+		System.out.println("updatePlayer says: hp=" + (int) player.hp);
+		writeBuff.clear();
+		writeBuff.putInt(player.secret);
+		writeBuff.putInt(player.x);
+		writeBuff.putInt(player.y);
+		writeBuff.putShort(player.dx);
+		writeBuff.putShort(player.dy);
+		writeBuff.put(player.hp);
+		writeBuff.flip();
+		try {
+			send(writeBuff);
+			parseResponse();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private static void sendNewPlayer(Scanner s)
@@ -76,18 +114,25 @@ public class Client {
 	private static void parseResponse()
 	{
 		readBuff.flip();
-		byte cmd = readBuff.get();
-		switch(cmd)
+		while(readBuff.hasRemaining())
 		{
-		case Server.RESPONSE_YOU:
-			secret = readBuff.getInt();
-			int id = readBuff.getShort();
-			Player p = new Player();
-			p.deserialize(readBuff);
-			System.out.println("New secret received: " + secret + " with public id " + id);
-			break;
-		case Server.RESPONSE_PLAYER:
-			break;
+			byte cmd = readBuff.get();
+			switch(cmd)
+			{
+			case Server.RESPONSE_YOU:
+				player = new Player();
+				player.secret = readBuff.getInt();
+				player.id = readBuff.getShort();
+				player.hp = 100;
+				System.out.println("New secret received: " + player.secret + " with public id " + player.id + " - hp: " + player.hp);
+				break;
+			case Server.RESPONSE_PLAYER:
+				Player p = new Player();
+				p.id = readBuff.getShort();
+				p.deserialize(readBuff);
+				System.out.println(p.id + " - " + p.x + "x" + p.y + " -> " + p.dx + "x" + p.dy);
+				break;
+			}
 		}
 	}
 
@@ -104,6 +149,8 @@ public class Client {
 	{
 		System.out.println("List of commands:");
 		System.out.println("new_player [name] [x] [y]");
+		System.out.println("move_player [x] [y] [dx] [dy]");
+		System.out.println("set_hp [hp]");
 		System.out.println("exit\nquit");
 	}
 }

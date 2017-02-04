@@ -21,6 +21,7 @@ public class Server extends Thread
 
 	public static final byte RESPONSE_PLAYER = 'p';
 	public static final byte RESPONSE_YOU = 'u';
+	public static final byte COMMAND_UPDATE = 'u';
 
 	private DatagramChannel channel;
 	private ByteBuffer buff = ByteBuffer.allocate(65507);
@@ -63,10 +64,20 @@ public class Server extends Thread
 			Player player = getPlayer(addr, buff, writeBuff);
 
 			LOG.info("Incoming packet from " + addr  + " - " + player + ": " + buff.position());
+			if (buff.hasRemaining())
+			{
+				byte cmd = buff.get();
+				switch(cmd)
+				{
+				case COMMAND_UPDATE:
+					commandUpdate(player, buff);
+					break;
+				default:
+					LOG.severe("Unknown command received: " + cmd);
+				}
+			}
 			buff.flip();
 			buff.clear();
-
-			writeBuff.put("Hej på dig, din fjert".getBytes("UTF-8"));
 
 			sendPlayers(player, writeBuff);
 			writeBuff.flip();
@@ -75,6 +86,11 @@ public class Server extends Thread
 		} catch (IOException e) {
 			LOG.log(Level.SEVERE, "Exception trying to receive UDP-package", e);
 		}
+	}
+
+	private void commandUpdate(Player player, ByteBuffer read)
+	{
+		player.deserialize(read);
 	}
 
 	private void sendPlayers(Player player, ByteBuffer write)
@@ -119,7 +135,7 @@ public class Server extends Thread
 		}
 
 		Player player = getPlayer(secret);
-		player.deserialize(write);
+		player.deserialize(read);
 		return player;
 	}
 

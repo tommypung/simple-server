@@ -8,14 +8,14 @@ public class Player
 {
 	private static final Random rand = new Random();
 
-	int secret;
-	short id;
+	public int secret;
+	public short id;
 	byte[] name;
-	int x;
-	int y;
-	short dx;
-	short dy;
-	byte hp;
+	public int x;
+	public int y;
+	public short dx;
+	public short dy;
+	public byte hp;
 
 	public void serialize(ByteBuffer buffer)
 	{
