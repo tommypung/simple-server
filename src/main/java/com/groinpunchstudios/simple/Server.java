@@ -110,7 +110,7 @@ public class Server extends Thread
 
 			write.put(RESPONSE_YOU);
 			write.putInt(player.secret);
-			player.deserialize(write);
+			player.deserialize(read);
 
 			addPlayer(player);
 			return player;
