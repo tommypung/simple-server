@@ -19,8 +19,8 @@ public class Server extends Thread
 	private static final Logger LOG = Logger.getLogger(Server.class.getName());
 	private static final Collection<Server> servers = new LinkedList<>();
 
-	private static final byte RESPONSE_PLAYER = 'p';
-	private static final byte RESPONSE_YOU = 'u';
+	public static final byte RESPONSE_PLAYER = 'p';
+	public static final byte RESPONSE_YOU = 'u';
 
 	private DatagramChannel channel;
 	private ByteBuffer buff = ByteBuffer.allocate(65507);
@@ -113,6 +113,8 @@ public class Server extends Thread
 			player.deserialize(read);
 
 			addPlayer(player);
+			write.putShort(player.id);
+
 			return player;
 		}
 

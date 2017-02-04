@@ -20,8 +20,6 @@ public class Player
 	public void serialize(ByteBuffer buffer)
 	{
 		buffer.putShort(id);
-		buffer.put(name, 0, name.length & 0xff);
-		buffer.put((byte) 0);
 		buffer.putInt(x);
 		buffer.putInt(y);
 		buffer.putShort(dx);
@@ -38,7 +36,10 @@ public class Player
 	public String toString()
 	{
 		try {
-			return new String(name, "UTF-8") + " @ " + x + "x" + y;
+			if (name != null)
+				return new String(name, "UTF-8") + " @ " + x + "x" + y + " id:" + id + " secret:" + secret;
+			else
+				return "noname @ " + x + "x" + y + " id:" + id + " secret:" + secret;
 		} catch (UnsupportedEncodingException e) {
 			return null;
 		}
