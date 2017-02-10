@@ -193,6 +193,8 @@ public class HelloWorld
 	
 	Console.WriteLine("----- Running Johnnys NetworkManager.cs -----");
 	NetworkManager nm = new NetworkManager();
+	nm.playerPrefab = new UnityEngine.GameObject();
+	nm.playerManager = new UnityEngine.GameObject();
 	nm.Connect("127.0.0.1", 9999);
 	nm.login();
 	while(true)
