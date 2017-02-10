@@ -73,7 +73,7 @@ public class Server extends Thread
 					commandUpdate(player, buff);
 					break;
 				default:
-					LOG.severe("Unknown command received: " + cmd);
+					LOG.severe("Unknown command received: " + cmd + " - " + (char) cmd);
 				}
 			}
 			buff.flip();
@@ -135,7 +135,6 @@ public class Server extends Thread
 		}
 
 		Player player = getPlayer(secret);
-		player.deserialize(read);
 		return player;
 	}
 
