@@ -1,123 +1,9 @@
 using System.Runtime.CompilerServices;
 using System;
+using System.Linq;
 using System.Text;
-
-public class Packet
-{
-   public static int secret = 0x00000000;
-
-   public static void setInt32(ref byte[] byteArr, int offset, int atBit, Int32 val)
-     {
-	int startIndex = offset + (atBit >> 3);
-	if ((atBit % 8) == 0)
-	  {
-	     byteArr[startIndex++] =   (byte) ((val>>24) & 0xFF);
-	     byteArr[startIndex++] = (byte) ((val>>16) & 0xFF);
-	     byteArr[startIndex++] = (byte) ((val>>8)  & 0xFF);
-	     byteArr[startIndex++] = (byte) (val       & 0xFF);
-	  }
-     }
-
-   public static void setInt16(ref byte[] byteArr, int offset, int atBit, Int16 val)
-     {
-	int startIndex = offset + (atBit >> 3);
-	if ((atBit % 8) == 0)
-	  {
-	     byteArr[startIndex++] = (byte) ((val>>8)  & 0xFF);
-	     byteArr[startIndex++] = (byte) (val       & 0xFF);
-	  }
-     }
-
-   public static int setString(ref byte[] byteArr, int offset, int atBit, string val)
-     {
-	int startIndex = offset + (atBit >> 3);
-	byte[] toBytes = Encoding.UTF8.GetBytes(val);
-	for(int i=0;i<toBytes.Length;i++)
-	  byteArr[offset + startIndex + i] = toBytes[i];
-	offset += toBytes.Length;
-	byteArr[offset + startIndex] = 0x00;
-	return offset + 1;
-     }
-
-   public static void setByte(ref byte[] byteArr, int offset, int atBit, byte val)
-     {
-	int startIndex = offset + (atBit >> 3);
-	if ((atBit % 8) == 0)
-	  byteArr[startIndex++] = (byte) (val       & 0xFF);
-     }
-
-   public static Int32 getInt32(ref byte[] byteArr, int offset, int atBit)
-     {
-	int startIndex = offset + (atBit >> 3);
-	if ((atBit % 8) == 0)
-	  return (Int32) (
-			  ((byteArr[startIndex]     << 24) & (UInt32) 0xFF000000) |
-			  ((byteArr[startIndex + 1] << 16) & (UInt32) 0x00FF0000) |
-			  ((byteArr[startIndex + 2] << 8)  & (UInt32) 0x0000FF00) |
-			  ((byteArr[startIndex + 3]     )  & (UInt32) 0x000000FF));
-
-	return -1;	
-     }
-
-   [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-   public static byte getByte(ref byte[] byteArr, int offset, int atBit)
-       {
-	  return byteArr[offset + (atBit >> 3)];
-       }
-
-   public static Int16 getInt16(ref byte[] byteArr, int offset, int atBit)
-     {
-	int startIndex = offset + (atBit >> 3);
-	if ((atBit % 8) == 0)
-	  return (Int16) (((byteArr[startIndex] << 8) & (UInt16) 0xFF00) | (byteArr[startIndex + 1] & (UInt16) 0x00FF));
-
-	return -1;
-     }
-  
-   public static class LoginResponse
-     {
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int32 getSecret(ref byte[] byteArr, int offset)   { return Packet.getInt32(ref byteArr, offset, 0); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int16 getId(ref byte[] byteArr, int offset)       { return Packet.getInt16(ref byteArr, offset, 32); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int16 nextOffset(ref byte[] byteArr, int offset)  { return 6; }
-     }
-
-   public static class PlayerResponse
-     {
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int16 getId(ref byte[] byteArr, int offset)       { return Packet.getInt16(ref byteArr, offset, 0); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int32 getX(ref byte[] byteArr, int offset)        { return Packet.getInt32(ref byteArr, offset, 16); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int32 getY(ref byte[] byteArr, int offset)        { return Packet.getInt32(ref byteArr, offset, 48); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int16 getDX(ref byte[] byteArr, int offset)       { return Packet.getInt16(ref byteArr, offset, 80); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int16 getDY(ref byte[] byteArr, int offset)       { return Packet.getInt16(ref byteArr, offset, 96); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte  getHP(ref byte[] byteArr, int offset)       { return Packet.getByte(ref byteArr, offset, 112); }
-	[MethodImpl(MethodImplOptions.AggressiveInlining)] public static Int16 nextOffset(ref byte[] byteArr, int offset)  { return 15; }
-     }
-   
-   public static class Player
-     {
-	public static int login(ref byte[] byteArr, int offset, string name, Int32 x, Int32 y, Int16 dx, Int16 dy, byte hp)
-	  {
-	     Packet.setInt32(ref byteArr, offset, 0, 0x00000000);
-	     offset += Packet.setString(ref byteArr, offset, 32, name);
-	     Packet.setInt32(ref byteArr, offset, 32,   x);
-	     Packet.setInt32(ref byteArr, offset, 64,   y);
-	     Packet.setInt16(ref byteArr, offset, 96,   dx);
-	     Packet.setInt16(ref byteArr, offset, 112,  dy);
-	     Packet.setByte( ref byteArr, offset, 128,  hp);
-	     return offset + 17;
-	  }
-
-	public static int update(ref byte[] byteArr, int offset, Int32 x, Int32 y, Int16 dx, Int16 dy, byte hp)
-	  {
-	     Packet.setByte(ref byteArr, offset,  0,    0x75);
-	     Packet.setInt32(ref byteArr, offset, 8,   x);
-	     Packet.setInt32(ref byteArr, offset, 40,   y);
-	     Packet.setInt16(ref byteArr, offset, 72,   dx);
-	     Packet.setInt16(ref byteArr, offset, 88,  dy);
-	     Packet.setByte( ref byteArr, offset, 104,  hp);
-	     return offset + 14;
-	  }
-     }
-}
+using System.Text.RegularExpressions;
+using static NetworkManager;
 
 public class HelloWorld
 {
@@ -191,6 +77,41 @@ public class HelloWorld
 	       }
 	  }
 	
+	byte[] br = new byte[] 
+	  {
+	     0xAB, 0xF3, 0x3F, 0x40, 0xC0 // 1010 1011 - 1111 11111 - 1111 1111 - 0100 0000
+	  };
+	byte[] brO = new byte[] {
+	   0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+	};
+	Console.WriteLine("brO = " + string.Join(" ", brO.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+	Packet.setInt32(ref brO, 0, 2, unchecked((Int32) 0xAFCCFD03));
+	Console.WriteLine("br  = " + string.Join(" ", br.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+	Console.WriteLine("brO = " + string.Join(" ", brO.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+	Console.WriteLine("2 % 8 = " + 2%8);
+	Console.WriteLine("Read= " + Convert.ToString(Packet.getInt32(ref brO, 0, 2), 2));
+
+	Packet.setInt32(ref brO, 0, 2, unchecked((Int32) 0x00001120));
+	/* Console.WriteLine("br  = " + string.Join(" ", br.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray())); */
+	Console.WriteLine("brO = " + string.Join("", brO.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+	Console.WriteLine("Read= --" + Convert.ToString(
+							Packet.getInt32(ref brO, 0, 2),
+							2).PadLeft(32, '0'));
+
+	if (Packet.getInt32(ref brO, 0, 2) != 0x00001120)
+	  Console.WriteLine("Ints do not match");
+
+	/* if (true) return; */
+	
+	for(int i=0;i<=18;i++)
+	  checkByte(i);
+
+	for(int i=0;i<=15;i++)
+	  checkInt16(i);
+
+	checkInt32(7);
+	
+	if (true) return;
 	Console.WriteLine("----- Running Johnnys NetworkManager.cs -----");
 	NetworkManager nm = new NetworkManager();
 	nm.playerPrefab = new UnityEngine.GameObject();
@@ -202,4 +123,91 @@ public class HelloWorld
 	     nm.Update();
 	  }
      }
+
+   public static void checkByte(int atBit)
+     {
+	Console.WriteLine("Testing all possible values of Byte - quick (atBit={0})", atBit);
+	byte[] brO = new byte[] {
+	   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+	};
+	for(byte i=0;i<0xFF;i++)
+	  {
+	     Packet.setByte(ref brO, 0, atBit, i);
+	     byte res = Packet.getByte(ref brO, 0, atBit);
+	     if ((UInt16) res != (UInt16) i)
+	       {
+		  Console.WriteLine("res = " + (atBit % 8));
+		  Console.WriteLine("Mismatching i  =0x{0:X2}", i);
+		  Console.WriteLine("Mismatching res=0x{0:X2}", res);
+		  Console.WriteLine("brO = " + string.Join("", brO.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+		  Console.WriteLine("Read= " + "".PadLeft(atBit, '-') +
+				    Convert.ToString(
+						     res,
+						     2).PadLeft(8, '0')
+				   );
+		  System.Environment.Exit(1);
+	       }
+	  }
+	Console.WriteLine("Done");
+     }
+
+   public static void checkInt16(int atBit)
+     {
+	Console.WriteLine("Testing all possible values of Int16 - quick (atBit={0})", atBit);
+	byte[] brO = new byte[] {
+	   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+	};
+	for(UInt16 i=0;i<0xFFFF;i++)
+	  {
+	     if ((i & 0x3FFF) == 0)
+	       Console.WriteLine("i = " + i + " {0}%", ((double)i / (double)0xFFFF) * 100);
+
+	     Packet.setInt16(ref brO, 0, atBit, unchecked((Int16) i));
+	     UInt16 res = (UInt16) Packet.getInt16(ref brO, 0, atBit);
+	     if ((UInt16) res != (UInt16) i)
+	       {
+		  Console.WriteLine("res = " + (atBit % 8));
+		  Console.WriteLine("Mismatching i  =0x{0:X8}", i);
+		  Console.WriteLine("Mismatching res=0x{0:X8}", res);
+		  Console.WriteLine("brO = " + string.Join("", brO.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+		  Console.WriteLine("Read= " + "".PadLeft(atBit, '-') +
+				    Convert.ToString(
+						     res,
+						     2).PadLeft(16, '0')
+				   );
+		  System.Environment.Exit(1);
+	       }
+	  }
+	Console.WriteLine("Done");
+     }
+
+   public static void checkInt32(int atBit)
+     {
+	Console.WriteLine("Testing all possible values of Int32 - this might take a while (atBit={0})", atBit);
+	byte[] brO = new byte[] {
+	   0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+	};
+	for(UInt32 i=0;i<0xFFFFFFFF;i++)
+	  {
+	     if ((i & 0x0FFFFFFF) == 0)
+	       Console.WriteLine("i = " + i + " {0}%", ((double)i / (double)0xFFFFFFFF) * 100);
+	     
+	     Packet.setInt32(ref brO, 0, atBit, unchecked((Int32) i));
+	     UInt32 res = (UInt32) Packet.getInt32(ref brO, 0, atBit);
+	     if ((UInt32) res != (UInt32) i)
+	       {
+		  Console.WriteLine("Mismatching i  =0x{0:X8}", i);
+		  Console.WriteLine("Mismatching res=0x{0:X8}", res);
+		  Console.WriteLine("brO = " + string.Join("", brO.Select( x => Convert.ToString( x, 2 ).PadLeft( 8, '0' ) ).ToArray()));
+		  Console.WriteLine("Read= " + "".PadLeft(atBit, '-') +
+				    Convert.ToString(
+						     res,
+						     2).PadLeft(32, '0')
+				   );
+		  return;
+	       }
+	  }
+	Console.WriteLine("Done");
+     }
 }
+

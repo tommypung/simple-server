@@ -238,24 +238,44 @@ private static List<Byte[]> events = new List<Byte[]>();
 
 		public static void setInt32(ref byte[] byteArr, int offset, int atBit, Int32 val)
 		{
-			int startIndex = offset + (atBit >> 3);
-			if ((atBit % 8) == 0)
-			{
-				byteArr[startIndex++] =   (byte) ((val>>24) & 0xFF);
-				byteArr[startIndex++] = (byte) ((val>>16) & 0xFF);
-				byteArr[startIndex++] = (byte) ((val>>8)  & 0xFF);
-				byteArr[startIndex++] = (byte) (val       & 0xFF);
-			}
+		   int startIndex = offset + (atBit >> 3);
+		   int res = atBit % 8;
+		   if (res == 0)
+		     {
+			byteArr[startIndex++] =   (byte) ((val>>24) & 0xFF);
+			byteArr[startIndex++] = (byte) ((val>>16) & 0xFF);
+			byteArr[startIndex++] = (byte) ((val>>8)  & 0xFF);
+			byteArr[startIndex++] = (byte) (val       & 0xFF);
+		     }
+		   else
+		     {
+			byteArr[startIndex] &= (byte) (0xFF<<(8-res)); // clear old data
+			byteArr[startIndex++] |= (byte) ((val >> (24 + res)) & (0xFF>>res));
+			byteArr[startIndex++] = (byte) ((val >> (16 + res)) & (0xFF));
+			byteArr[startIndex++] = (byte) ((val >> (8 + res)) & (0xFF));
+			byteArr[startIndex++] = (byte) ((val >> (res)) & (0xFF));
+			byteArr[startIndex] &= (byte) (0xFF>>res); // clear old data
+			byteArr[startIndex++] |= (byte) ((val << (8-res)) & (0xFF<<(8-res)));
+		     }
 		}
 
 		public static void setInt16(ref byte[] byteArr, int offset, int atBit, Int16 val)
 		{
-			int startIndex = offset + (atBit >> 3);
-			if ((atBit % 8) == 0)
-			{
-				byteArr[startIndex++] = (byte) ((val>>8)  & 0xFF);
-				byteArr[startIndex++] = (byte) (val       & 0xFF);
-			}
+		   int startIndex = offset + (atBit >> 3);
+		   int res = atBit % 8;
+		   if (res == 0)
+		     {
+			byteArr[startIndex++] = (byte) ((val>>8)  & 0xFF);
+			byteArr[startIndex++] = (byte) (val       & 0xFF);
+		     }
+		   else
+		     {
+			byteArr[startIndex] &= (byte) (0xFF<<(8-res)); // clear old data
+			byteArr[startIndex++] |= (byte) ((val >> (8 + res)) & (0xFF>>res));
+			byteArr[startIndex++] = (byte) ((val >> (res)) & (0xFF));
+			byteArr[startIndex] &= (byte) (0xFF>>res); // clear old data
+			byteArr[startIndex++] |= (byte) ((val << (8-res)) & (0xFF<<(8-res)));
+		     }
 		}
 
 		public static int setString(ref byte[] byteArr, int offset, int atBit, string val)
@@ -271,37 +291,95 @@ private static List<Byte[]> events = new List<Byte[]>();
 
 		public static void setByte(ref byte[] byteArr, int offset, int atBit, byte val)
 		{
-			int startIndex = offset + (atBit >> 3);
-			if ((atBit % 8) == 0)
-				byteArr[startIndex++] = (byte) (val       & 0xFF);
+		   int startIndex = offset + (atBit >> 3);
+		   int res = atBit % 8;
+		   if (res == 0)
+		     byteArr[startIndex++] = (byte) (val       & 0xFF);
+		   else
+		     {
+			byteArr[startIndex] &= (byte) (0xFF<<(8-res)); // clear old data
+			byteArr[startIndex++] |= (byte) ((val >> res) & (0xFF>>res));
+
+			byteArr[startIndex] &= (byte) (0xFF>>res); // clear old data
+			byteArr[startIndex] |= (byte) ((val << (8-res)) & (0xFF<<(8-res)));
+		     }
 		}
 
 		public static Int32 getInt32(ref byte[] byteArr, int offset, int atBit)
 		{
-			int startIndex = offset + (atBit >> 3);
-			if ((atBit % 8) == 0)
-				return (Int32) (
-					((byteArr[startIndex]     << 24) & (UInt32) 0xFF000000) |
-					((byteArr[startIndex + 1] << 16) & (UInt32) 0x00FF0000) |
-					((byteArr[startIndex + 2] << 8)  & (UInt32) 0x0000FF00) |
-					((byteArr[startIndex + 3]     )  & (UInt32) 0x000000FF));
-
-			return -1;	
+		   int startIndex = offset + (atBit >> 3);
+		   int res = atBit % 8;
+		   if (res == 0)
+		     return (Int32) (
+				     ((byteArr[startIndex]     << 24) & (UInt32) 0xFF000000) |
+				     ((byteArr[startIndex + 1] << 16) & (UInt32) 0x00FF0000) |
+				     ((byteArr[startIndex + 2] << 8)  & (UInt32) 0x0000FF00) |
+				     ((byteArr[startIndex + 3]     )  & (UInt32) 0x000000FF));
+		   else
+		     {
+			/* Int32 _first = (Int32) ((byteArr[startIndex] & (0xFF >> res)) << (24 + res)); */
+			/* Int32 _second = (Int32) ((byteArr[startIndex + 1]) << (16 + res)); */
+			/* Int32 _third = (Int32) ((byteArr[startIndex + 2]) << (8 + res)); */
+			/* Int32 _fourth = (Int32) ((byteArr[startIndex + 3]) << (res)); */
+			/* Int32 _fifth = (Int32) ((byteArr[startIndex + 4]) >> (8 - res)); */
+			return (Int32) (
+					((byteArr[startIndex] & (0xFF >> res)) << (24 + res)) |
+					((byteArr[startIndex + 1]) << (16 + res)) |
+					((byteArr[startIndex + 2]) << (8 + res)) |
+					((byteArr[startIndex + 3]) << (res)) |
+					((byteArr[startIndex + 4]) >> (8 - res))
+				       );
+		     }
 		}
 
 		 
 		public static byte getByte(ref byte[] byteArr, int offset, int atBit)
 		{
-			return byteArr[offset + (atBit >> 3)];
+		   int startIndex = offset + (atBit >> 3);
+		   int res = atBit % 8;
+		   if (res == 0)
+		     return byteArr[startIndex];
+		   else
+		     return (byte) (((byteArr[startIndex] << res) & (0xFF << res)) |
+				    (byteArr[startIndex + 1] >> (8 - res)));
 		}
 
 		public static Int16 getInt16(ref byte[] byteArr, int offset, int atBit)
 		{
-			int startIndex = offset + (atBit >> 3);
-			if ((atBit % 8) == 0)
-				return (Int16) (((byteArr[startIndex] << 8) & (UInt16) 0xFF00) | (byteArr[startIndex + 1] & (UInt16) 0x00FF));
+		   int startIndex = offset + (atBit >> 3);
+		   int res = atBit % 8;
+		   if (res == 0)
+		     return (Int16) (((byteArr[startIndex] << 8) & (UInt16) 0xFF00) | (byteArr[startIndex + 1] & (UInt16) 0x00FF));
+		   else
+		     {
+			// atBit=5,  res=5
+			// 8 + res = 13
+			// 8 - res = 3
+			// 
+			// 
+		        // 1234 5678 9ABC DEFG HIJK LMNO
+			// 1234 5678                     & 0xFF >> 5 (res)
+			// 0000 0FFF
+			// ---------
+			// 0000 0678                     << 8 + res
+			// 6780 0000 0000 0000
+			//
+			// 9ABC DEFG                     << res
+			// 0009 ABCD EFG0 0000
+			// 
+			// HIJK LMNO                     >> 3 (8 - res)
+			// 0000 0000 000H IJKL
+			
+			Int16 _first = (Int16) ((byteArr[startIndex] & (0xFF >> res)) << (8 + res));
+			Int16 _second = (Int16) ((byteArr[startIndex + 1]) << (res));
+			Int16 _third = (Int16) ((byteArr[startIndex + 2]) >> (8 - res));
 
-			return -1;
+			/* Console.WriteLine("from _first byte  = " + Convert.ToString(_first, 2).PadLeft(16, '0')); */
+			/* Console.WriteLine("from _second byte = " + Convert.ToString(_second, 2).PadLeft(16, '0')); */
+			/* Console.WriteLine("from _third byte  = " + Convert.ToString(_third, 2).PadLeft(16, '0')); */
+
+			return (Int16) (_first | _second | _third);
+		     }
 		}
 
 		public static class LoginResponse
