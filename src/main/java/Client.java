@@ -2,8 +2,20 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
+import com.googlecode.lanterna.TerminalPosition;
+import com.googlecode.lanterna.TextCharacter;
+import com.googlecode.lanterna.input.KeyStroke;
+import com.googlecode.lanterna.input.KeyType;
+import com.googlecode.lanterna.screen.Screen;
+import com.googlecode.lanterna.screen.TerminalScreen;
+import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
+import com.googlecode.lanterna.terminal.Terminal;
 import com.groinpunchstudios.simple.Player;
 import com.groinpunchstudios.simple.Server;
 
@@ -13,8 +25,11 @@ public class Client {
 	private static ByteBuffer readBuff = ByteBuffer.allocate(65507);
 	private static ByteBuffer writeBuff = ByteBuffer.allocate(65507);
 	private static Player player;
+	private static DatagramChannel channel;
+	private static Selector sel;
+	private static boolean guiMode = false;
 
-	public static void main(String[] args)
+	public static void main(String[] args) throws IOException
 	{
 		System.out.println("Testing client for SimpleServer");
 		if (args.length < 2)
@@ -26,6 +41,10 @@ public class Client {
 		host = args[0];
 		port = Integer.parseInt(args[1]);
 		System.out.println("Communicating with " + host + ":" + port);
+		channel = DatagramChannel.open();
+		channel.configureBlocking(false);
+		channel.socket().setSoTimeout(2000);
+		sel = Selector.open();
 		printHelp();
 		Scanner s = new Scanner(System.in);
 		while(s.hasNext()) {
@@ -51,6 +70,13 @@ public class Client {
 					updatePlayer();
 				}
 				break;
+			case "gui":
+				try {
+					enterGUIMode();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				break;
 			case "new_player":
 				sendNewPlayer(s);
 				break;
@@ -71,9 +97,12 @@ public class Client {
 
 	private static void updatePlayer()
 	{
-		System.out.println("updatePlayer says: hp=" + (int) player.hp);
+		if (!guiMode)
+			System.out.println("updatePlayer says: hp=" + (int) player.hp);
+
 		writeBuff.clear();
 		writeBuff.putInt(player.secret);
+		writeBuff.put((byte) Server.COMMAND_UPDATE);
 		writeBuff.putInt(player.x);
 		writeBuff.putInt(player.y);
 		writeBuff.putShort(player.dx);
@@ -111,6 +140,8 @@ public class Client {
 		}
 	}
 
+	private static Map<Short, Player> players = new HashMap<>();
+
 	private static void parseResponse()
 	{
 		readBuff.flip();
@@ -120,27 +151,87 @@ public class Client {
 			switch(cmd)
 			{
 			case Server.RESPONSE_YOU:
-				player = new Player();
+				if (player == null)
+					player = new Player();
 				player.secret = readBuff.getInt();
 				player.id = readBuff.getShort();
 				player.hp = 100;
-				System.out.println("New secret received: " + player.secret + " with public id " + player.id + " - hp: " + player.hp);
+				if (!guiMode)
+					System.out.println("New secret received: " + player.secret + " with public id " + player.id + " - hp: " + player.hp);
 				break;
 			case Server.RESPONSE_PLAYER:
-				Player p = new Player();
-				p.id = readBuff.getShort();
+				short id = readBuff.getShort();
+				Player p = players.get(id);
+				if (p == null) {
+					p = new Player();
+					p.id = id;
+					players.put(id, p);
+				}
 				p.deserialize(readBuff);
-				System.out.println(p.id + " - " + p.x + "x" + p.y + " -> " + p.dx + "x" + p.dy);
+				if (!guiMode)
+					System.out.println(p.id + " - " + p.x + "x" + p.y + " -> " + p.dx + "x" + p.dy);
 				break;
 			}
 		}
 	}
 
+	private static void printPlayer(Screen screen, int row, int col, Player player) throws IOException
+	{
+		printText(screen, row, col, "Player #" + player.id + ": " + player.x + "x" + player.y + ", " + player.dx + "x" + player.dy + ", latency: " + player.getLatency() + ", alive: " + player.isAlive());
+	}
+
+	private static int printText(Screen screen, int row, int col, String str) throws IOException
+	{
+		int len = str.length();
+		for(int i=0;i<len;i++)
+			screen.setCharacter(col + i, row, new TextCharacter(str.charAt(i)));
+		return len;
+	}
+
+	private static void enterGUIMode() throws IOException
+	{
+		guiMode = true;
+		Terminal terminal = new DefaultTerminalFactory().createTerminal();
+		Screen screen = new TerminalScreen(terminal);
+		screen.startScreen();
+
+		while(true)
+		{
+			updatePlayer();
+			screen.setCursorPosition(TerminalPosition.TOP_LEFT_CORNER);
+			int y = 0;
+			printPlayer(screen, y++, 0, player);
+			for(Player p : players.values())
+				printPlayer(screen, y++, 0, p);
+
+			screen.refresh();
+
+			KeyStroke stroke = screen.pollInput();
+			if (stroke != null && stroke.getKeyType() == KeyType.Escape)
+				break;
+		}
+		screen.stopScreen();
+		printHelp();
+	}
+
 	private static ByteBuffer send(ByteBuffer writeBuff) throws IOException
 	{
-		DatagramChannel channel = DatagramChannel.open();
 		channel.send(writeBuff, new InetSocketAddress(host,port));
 		readBuff.clear();
+		try {
+			channel.register(sel, SelectionKey.OP_READ);
+			int n = sel.select(1000);
+			sel.selectedKeys().clear();
+			if (n != 1)
+			{
+				System.out.println("No response received within 1000ms - n = " + n);
+				readBuff.clear();
+				return readBuff;
+			}
+		} finally {
+
+		}
+
 		channel.receive(readBuff);
 		return readBuff;
 	}

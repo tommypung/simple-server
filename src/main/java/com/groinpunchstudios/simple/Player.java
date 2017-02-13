@@ -16,6 +16,9 @@ public class Player
 	public short dx;
 	public short dy;
 	public byte hp;
+	public long mLastUpdateTimestamp = 0;
+	public long mLatencyTotal = 0;
+	public long mLatencyCount = 0;
 
 	public void serialize(ByteBuffer buffer)
 	{
@@ -37,7 +40,7 @@ public class Player
 	{
 		try {
 			if (name != null)
-				return new String(name, "UTF-8") + " @ " + x + "x" + y + " id:" + id + " secret:" + secret;
+				return new String(name, "UTF-8") + " @ " + x + "x" + y + " id:" + id + " secret:" + secret + ", latency: ";
 			else
 				return "noname @ " + x + "x" + y + " id:" + id + " secret:" + secret;
 		} catch (UnsupportedEncodingException e) {
@@ -52,5 +55,34 @@ public class Player
 		dx = buff.getShort();
 		dy = buff.getShort();
 		hp = buff.get();
+
+		addLatencyCalculations();
+	}
+
+	private void addLatencyCalculations()
+	{
+		long curr = System.currentTimeMillis();
+		if (mLastUpdateTimestamp != 0)
+		{
+			mLatencyTotal += curr - mLastUpdateTimestamp;
+			mLatencyCount++;
+		}
+
+		mLastUpdateTimestamp = curr;
+	}
+
+	public long getNumUpdatesReceived()
+	{
+		return mLatencyCount;
+	}
+
+	public boolean isAlive()
+	{
+		return (System.currentTimeMillis() - mLastUpdateTimestamp) < 10000;
+	}
+
+	public double getLatency()
+	{
+		return ((System.currentTimeMillis() - mLastUpdateTimestamp) + mLatencyTotal) / Math.max(mLatencyCount + 1, 1);
 	}
 }

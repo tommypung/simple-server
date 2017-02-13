@@ -52,7 +52,17 @@ public class StatusFile implements Runnable
 				pw.println("     [ UDP:" + server.port + "]");
 				for(Player player : server.players.values())
 				{
-					pw.println("pos:" + player.x + "x" + player.y + " dir:" + player.dx + "x" + player.dy + " hp:" + player.hp + " " + new String(player.name, "UTF-8"));
+					pw.println(
+							"pos:" + player.x +
+							"x" + player.y +
+							" dir:" + player.dx +
+							"x" + player.dy +
+							" hp:" + player.hp +
+							", " + new String(player.name, "UTF-8") +
+							", latency: " + player.getLatency() + "ms" +
+							", numPackets: " + player.getNumUpdatesReceived() +
+							((player.isAlive()) ? "" : " - xxx DEAD xxx")
+							);
 				}
 			}
 		} catch(Exception e) {
