@@ -71,6 +71,11 @@ public class Player
 		mLastUpdateTimestamp = curr;
 	}
 
+	public long getMsSinceLastUpdate()
+	{
+		return System.currentTimeMillis() - mLastUpdateTimestamp;
+	}
+
 	public long getNumUpdatesReceived()
 	{
 		return mLatencyCount;

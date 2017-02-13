@@ -177,7 +177,7 @@ public class Client {
 
 	private static void printPlayer(Screen screen, int row, int col, Player player) throws IOException
 	{
-		printText(screen, row, col, "Player #" + player.id + ": " + player.x + "x" + player.y + ", " + player.dx + "x" + player.dy + ", latency: " + player.getLatency() + ", alive: " + player.isAlive());
+		printText(screen, row, col, "Player #" + player.id + ": " + player.x + "x" + player.y + ", " + player.dx + "x" + player.dy + ", latency: " + player.getLatency() + ", msSinceLastUpdate: " + player.getMsSinceLastUpdate() + ", alive: " + player.isAlive());
 	}
 
 	private static int printText(Screen screen, int row, int col, String str) throws IOException
