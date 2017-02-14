@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -128,6 +129,7 @@ public class Client {
 			writeBuff.putInt(0x00000000);
 			writeBuff.put(name.getBytes("UTF-8"));
 			writeBuff.put((byte) 0x00);
+			writeBuff.putInt(0xFFFFFFFF);
 			writeBuff.putInt(x);
 			writeBuff.putInt(y);
 			writeBuff.putShort((short) 0x0000);
@@ -142,9 +144,10 @@ public class Client {
 
 	private static Map<Short, Player> players = new HashMap<>();
 
-	private static void parseResponse()
+	private static void parseResponse() throws UnsupportedEncodingException
 	{
 		readBuff.flip();
+		Player p;
 		while(readBuff.hasRemaining())
 		{
 			byte cmd = readBuff.get();
@@ -160,24 +163,35 @@ public class Client {
 					System.out.println("New secret received: " + player.secret + " with public id " + player.id + " - hp: " + player.hp);
 				break;
 			case Server.RESPONSE_PLAYER:
-				short id = readBuff.getShort();
-				Player p = players.get(id);
-				if (p == null) {
-					p = new Player();
-					p.id = id;
-					players.put(id, p);
-				}
+				p = getOrCreate(readBuff.getShort());
 				p.deserialize(readBuff);
 				if (!guiMode)
 					System.out.println(p.id + " - " + p.x + "x" + p.y + " -> " + p.dx + "x" + p.dy);
+				break;
+			case Server.RESPONSE_PLAYER_EXT_ATTR:
+				p = getOrCreate(readBuff.getShort());
+				p.deserializeExtAttr(readBuff);
+				if (!guiMode)
+					System.out.println(p.id + " - " + p.getNameString());
 				break;
 			}
 		}
 	}
 
+	private static Player getOrCreate(short id)
+	{
+		Player p = players.get(id);
+		if (p == null) {
+			p = new Player();
+			p.id = id;
+			players.put(id, p);
+		}
+		return p;
+	}
+
 	private static void printPlayer(Screen screen, int row, int col, Player player) throws IOException
 	{
-		printText(screen, row, col, "Player #" + player.id + ": " + player.x + "x" + player.y + ", " + player.dx + "x" + player.dy + ", latency: " + player.getLatency() + ", msSinceLastUpdate: " + player.getMsSinceLastUpdate() + ", alive: " + player.isAlive());
+		printText(screen, row, col, "Player #" + player.id + ": " + player.x + "x" + player.y + ", " + player.dx + "x" + player.dy + ", latency: " + player.getLatency() + ", msSinceLastUpdate: " + player.getMsSinceLastUpdate() + ", alive: " + player.isAlive() + ", name: " + player.getNameString() + "           ");
 	}
 
 	private static int printText(Screen screen, int row, int col, String str) throws IOException
@@ -200,9 +214,13 @@ public class Client {
 			updatePlayer();
 			screen.setCursorPosition(TerminalPosition.TOP_LEFT_CORNER);
 			int y = 0;
-			printPlayer(screen, y++, 0, player);
-			for(Player p : players.values())
-				printPlayer(screen, y++, 0, p);
+			try {
+				printPlayer(screen, y++, 0, player);
+				for(Player p : players.values())
+					printPlayer(screen, y++, 0, p);
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
 
 			screen.refresh();
 

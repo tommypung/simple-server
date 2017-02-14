@@ -58,7 +58,7 @@ public class StatusFile implements Runnable
 							" dir:" + player.dx +
 							"x" + player.dy +
 							" hp:" + player.hp +
-							", " + new String(player.name, "UTF-8") +
+							", " + player.getNameString() +
 							", latency: " + player.getLatency() + "ms" +
 							", numPackets: " + player.getNumUpdatesReceived() +
 							((player.isAlive()) ? "" : " - xxx DEAD xxx")

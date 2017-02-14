@@ -2,6 +2,7 @@ package com.groinpunchstudios.simple;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 public class Player
@@ -17,8 +18,25 @@ public class Player
 	public short dy;
 	public byte hp;
 	public long mLastUpdateTimestamp = 0;
+	public long mPreviousUpdateTimestamp = 0;
 	public long mLatencyTotal = 0;
 	public long mLatencyCount = 0;
+
+	public long mLastExtAttrChange = 0;
+
+	private String mNameString;
+
+	public int appearance;
+
+	public boolean hasLastUpdateBetween(long from, long to)
+	{
+		return from <= mLastUpdateTimestamp && mLastUpdateTimestamp <= to;
+	}
+
+	public boolean hasNameChangedBetween(long from, long to)
+	{
+		return from <= mLastExtAttrChange && mLastExtAttrChange <= to;
+	}
 
 	public void serialize(ByteBuffer buffer)
 	{
@@ -62,6 +80,7 @@ public class Player
 	private void addLatencyCalculations()
 	{
 		long curr = System.currentTimeMillis();
+		mPreviousUpdateTimestamp = mLastUpdateTimestamp;
 		if (mLastUpdateTimestamp != 0)
 		{
 			mLatencyTotal += curr - mLastUpdateTimestamp;
@@ -89,5 +108,46 @@ public class Player
 	public double getLatency()
 	{
 		return ((System.currentTimeMillis() - mLastUpdateTimestamp) + mLatencyTotal) / Math.max(mLatencyCount + 1, 1);
+	}
+
+	public void serializeExtendedAttributes(ByteBuffer write)
+	{
+		write.putShort(id);
+		write.put(name);
+		write.put((byte) 0x00);
+		write.putInt(appearance);
+	}
+
+	public void deserializeExtAttr(ByteBuffer read) throws UnsupportedEncodingException
+	{
+		byte[] name = new byte[100];
+		int index = 0;
+		byte ch;
+		while( (ch = read.get()) != 0x00)
+			if (index < 100)
+				name[index++] = ch;
+
+		setName(Arrays.copyOfRange(name, 0, index));
+		this.appearance = read.getInt();
+
+		this.mLastExtAttrChange = System.currentTimeMillis();
+	}
+
+	public byte[] getName()
+	{
+		return name;
+	}
+
+	public void setName(byte[] copyOfRange) throws UnsupportedEncodingException
+	{
+		this.mLastExtAttrChange = System.currentTimeMillis();
+		this.name = copyOfRange;
+		if (copyOfRange != null)
+			this.mNameString = new String(this.name, "UTF-8");
+	}
+
+	public String getNameString()
+	{
+		return this.mNameString;
 	}
 }

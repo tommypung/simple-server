@@ -22,6 +22,7 @@ public class Server extends Thread
 	public static final byte RESPONSE_PLAYER = 'p';
 	public static final byte RESPONSE_YOU = 'u';
 	public static final byte COMMAND_UPDATE = 'u';
+	public static final byte RESPONSE_PLAYER_EXT_ATTR = 'P';
 
 	private DatagramChannel channel;
 	private ByteBuffer buff = ByteBuffer.allocate(65507);
@@ -97,8 +98,16 @@ public class Server extends Thread
 	{
 		for(Player p : players.values())
 			if (p.id != player.id) {
-				write.put(RESPONSE_PLAYER);
-				p.serialize(write);
+				if (p.hasNameChangedBetween(player.mPreviousUpdateTimestamp, player.mLastUpdateTimestamp))
+				{
+					write.put(RESPONSE_PLAYER_EXT_ATTR);
+					p.serializeExtendedAttributes(write);
+				}
+				if (p.hasLastUpdateBetween(player.mPreviousUpdateTimestamp, player.mLastUpdateTimestamp))
+				{
+					write.put(RESPONSE_PLAYER);
+					p.serialize(write);
+				}
 			}
 	}
 
@@ -116,17 +125,11 @@ public class Server extends Thread
 				break;
 			}
 
-			int i=0;
-			byte ch;
-			do {
-				byteArray[i++] = ch = read.get();
-			} while(ch != 0);
-
-			player.name = Arrays.copyOfRange(byteArray, 0, i);
+			player.deserializeExtAttr(read);
+			player.deserialize(read);
 
 			write.put(RESPONSE_YOU);
 			write.putInt(player.secret);
-			player.deserialize(read);
 
 			addPlayer(player);
 			write.putShort(player.id);
